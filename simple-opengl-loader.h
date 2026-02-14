@@ -5988,10 +5988,11 @@ SOGL_FUNCTIONS_OVR_multiview
 
 /* IMPLEMENTATION */
 
-#if defined(SOGL_IMPLEMENTATION_WIN32) || defined(SOGL_IMPLEMENTATION_X11) || defined(SOGL_IMPLEMENTATION)
+#if defined(SOGL_IMPLEMENTATION_WIN32) || defined(SOGL_IMPLEMENTATION_X11) || defined(SOGL_IMPLEMENTATION_MACOS) || defined(SOGL_IMPLEMENTATION)
 
 #ifdef SOGL_IMPLEMENTATION_WIN32
 #ifdef SOGL_IMPLEMENTATION_X11
+#ifdef SOGL_IMPLEMENTATION_MACOS
 	#error Only one of SOGL_IMPLEMENTATION_WIN32 or SOGL_IMPLEMENTATION_X11 can be used at a time.
 #endif
 
@@ -6051,7 +6052,32 @@ void sogl_cleanup() {
     }
 }
 #endif /* SOGL_IMPLEMENTATION_X11 */
+#ifdef SOGL_IMPLEMENTATION_MACOS
+#if SOGL_MAJOR_VERSION > 4
+	#error OpenGL major version too high for MacOS
+#elif SOGL_MAJOR_VERSION == 4 && SOGL_MINOR_VERSION > 1
+	#error OpenGL minor version too high for MacOS
+#endif
+#include <dlfcn.h>
+static void* sogl_libHandle = SOGL_NULL;
 
+void *sogl_loadOpenGLFunction(const char *name) {  
+    if (!sogl_libHandle) {
+        sogl_libHandle = dlopen("/System/Library/Frameworks/OpenGL.framework/OpenGL", RTLD_LAZY | RTLD_LOCAL);
+    }
+
+    void *fn = dlsym(sogl_libHandle, name);
+
+    return fn;
+}
+
+void sogl_cleanup() {
+    if (sogl_libHandle) {
+        dlclose(sogl_libHandle);
+        sogl_libHandle = SOGL_NULL;
+    }
+}
+#endif /* SOGL_IMPLEMENTATION_MACOS */
 /*
     OpenGL Function Defintions
 */
